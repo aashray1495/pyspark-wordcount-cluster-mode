@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pyspark-wc
+spec:
+  template:
+    spec:
+      containers:
+        - name: pyspark-wc
+          image: 3.dkr.ecr.us-east-1.amazonaws.com/pyspark-clustermode:v2.4.5.7
+          imagePullPolicy: Always
+          command: [
+            "/bin/sh",
+            "-c",
+            "/opt/spark/bin/spark-submit \
+                        --master k8s://https://FBC700E00DA8ABA0BB381F2FC45D5D28.gr7.us-east-1.eks.amazonaws.com \
+                        --deploy-mode cluster \
+                        --name pyspark-wc \
+                        --executor-memory=1G \
+                        --driver-memory=1G \
+                        --conf spark.executor.instances=1 \
+                        --conf spark.executor.cores=1 \
+                        --conf spark.kubernetes.container.image=3.dkr.ecr.us-east-1.amazonaws.com/pyspark-clustermode:v2.4.5.7 \
+                        --conf spark.kubernetes.container.image.pullPolicy=Always \
+                        --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+                        --conf spark.kubernetes.driver.pod.name=pyspark-wc \
+                        --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.checkpointpvc.mount.path=/opt/spark/checkpoint \
+                        --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.checkpointpvc.mount.path=/opt/spark/checkpoint \
+                        --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.checkpointpvc.options.claimName=checkpoint \
+                        --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.checkpointpvc.options.claimName=checkpoint \
+                        --conf spark.checkpoint.location=file:///opt/spark/python \
+                        --conf spark.jars=/opt/spark/jars/spark-streaming-kafka-0-10_2.11-2.4.5.jar \
+                        local:///opt/spark/python/word_count.py"
+          ]
+      serviceAccountName: spark
+      restartPolicy: Never
+  backoffLimit: 4
